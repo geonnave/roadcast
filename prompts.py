@@ -29,7 +29,7 @@ def guide_instructions(user_interests, latlon, radius, nearby_places):
 
     The client is at latlon {latlon}, which has these nearby places (radius of {radius}): {nearby_places}
 
-    Generate 1 minute of speech script that will satisfy your client.
+    Generate 30 seconds of speech script that will satisfy your client.
     Note a few special tips that you must follow:
     - avoid being generic
     - try to focus on interesting things that are concrete

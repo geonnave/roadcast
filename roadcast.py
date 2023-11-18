@@ -76,6 +76,23 @@ class GPT:
         print(prompt)
         result = self.call(prompt)
         print(f"========\n\n{result}\n\n========")
+        return result
+
+class Whisper:
+    def __init__(self) -> None:
+        self.count = 0
+        self.client = OpenAI(
+            api_key=env["OPENAPI_KEY"],
+        )
+
+    def synth_audio(self, script):
+        response = self.client.audio.speech.create(
+            model="tts-1",
+            voice="alloy",
+            input=script,
+        )
+        response.stream_to_file(f"output-{self.count}.mp3")
+        self.count += 1
 
 @dataclass
 class Places:
@@ -112,7 +129,10 @@ class Places:
         response = requests.post(url, headers=headers, data=json.dumps(data))
         print(response.status_code)
         print(f"========\n\n{response.json()}\n\n========")
-        return [p["displayName"]["text"] for p in response.json()["places"]]
+        try:
+            return [p["displayName"]["text"] for p in response.json()["places"]]
+        except:
+            return None
 
 @dataclass
 class Mission:
@@ -120,6 +140,7 @@ class Mission:
     mode: MissionModes
     location_updater = LocationUpdaterMock()
     gpt = GPT()
+    whisper = Whisper()
     places = Places()
 
     def __post_init__(self):
@@ -131,8 +152,11 @@ class Mission:
         self.location_updater.start()
         while True:
             nearby_places = self.places.call_nearby(self.location_updater.get_latlon())
-            self.gpt.ask_guide_speech(self.user_interests, self.location_updater.get_latlon(), self.places.radius, nearby_places)
-            # self.generate_script()
+            if not nearby_places:
+                time.sleep(2)
+                continue
+            script = self.gpt.ask_guide_speech(self.user_interests, self.location_updater.get_latlon(), self.places.radius, nearby_places)
+            self.whisper.synth_audio(script)
             # self.synth_audio()
             # self.dispatch_play()
             time.sleep(2)

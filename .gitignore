@@ -1,2 +1,5 @@
 __pycache__
 .env
+output*
+tmp
+.DS_Store
