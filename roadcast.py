@@ -8,7 +8,7 @@ from os import environ as env
 from dotenv import load_dotenv
 load_dotenv()
 
-import logging, time, json
+import logging, time, json, requests
 
 import prompts
 
@@ -27,7 +27,7 @@ class LocationUpdaterMock(Thread):
     def run(self):
         while True:
             # mock new latlon
-            self.lon = round(self.lon + 0.0001, 6)
+            self.lon = round(self.lon + 0.0005, 6)
             logging.debug(f"User latlon: {self.lat}, {self.lon}")
             time.sleep(2)
 
@@ -58,10 +58,10 @@ class GPT:
         except:
             return None
 
-    def ask_target_places(self):
+    def ask_target_places(self, user_interests):
         if env["MOCK_GPT"] == "1":
             return json.loads(env["MOCK_INTEREST_POINTS"])
-        places_filter_prompt = prompts.places_filter(self.user_interests)
+        places_filter_prompt = prompts.places_filter(user_interests)
         result = self.call(places_filter_prompt)
         if result is not None:
             print(f"Got result: {result}")
@@ -74,16 +74,38 @@ class GPT:
 @dataclass
 class Places:
     target_points: list = field(default_factory=list)
-    radius: int = 30
+    radius: int = None
 
     def set_radius(self, mode):
-        self.radius = 30 if mode == MissionModes.CITY else 300
+        self.radius = 50 if mode == MissionModes.CITY else 300
 
     def set_targets(self, targets):
         self.target_points = targets
 
-    def call(self):
-        pass
+    def call_nearby(self, latlon):
+        url = "https://places.googleapis.com/v1/places:searchNearby"
+        headers = {
+            'Content-Type': 'application/json',
+            'X-Goog-Api-Key': env["GOOGLE_MAPS_KEY"],  # Replace 'API_KEY' with your actual API key
+            'X-Goog-FieldMask': 'places.displayName',
+        }
+        data = {
+            "includedTypes": self.target_points,
+            "maxResultCount": 10,
+            "locationRestriction": {
+                "circle": {
+                    "center": {
+                        "latitude": latlon[0],
+                        "longitude": latlon[1]
+                    },
+                    "radius": self.radius
+                }
+            }
+        }
+        logging.debug(f"Prepared data: {data}")
+        response = requests.post(url, headers=headers, data=json.dumps(data))
+        print(response.status_code)
+        print(f"========\n\n{response.json()}\n\n========")
 
 @dataclass
 class Mission:
@@ -105,14 +127,15 @@ class Mission:
             # self.generate_script()
             # self.synth_audio()
             # self.dispatch_play()
-            time.sleep(0.1)
+            time.sleep(2)
+            print()
         self.location_updater.join()
     
     def find_nearby_places(self, latlon):
-        res = self.places.call()
+        res = self.places.call_nearby(latlon)
 
     def load_target_types(self):
-        targets = self.gpt.ask_target_places()
+        targets = self.gpt.ask_target_places(self.user_interests)
         if targets is not None:
             self.places.set_targets(targets)
 
