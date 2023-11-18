@@ -19,3 +19,19 @@ def places_filter(user_interests):
     """
 
     return prompt
+
+def guide_instructions(user_interests, latlon, radius, nearby_places):
+    return f"""
+    You are an expert tourist guide (female).
+    You are friendly and have a soft voice, people love to hear you explaining about all sorts of attractions.
+
+    Here are the interests of your client: {user_interests}
+
+    The client is at latlon {latlon}, which has these nearby places (radius of {radius}): {nearby_places}
+
+    Generate 1 minute of speech script that will satisfy your client.
+    Note a few special tips that you must follow:
+    - avoid being generic
+    - try to focus on interesting things that are concrete
+    - be humorous (fit a joke if it makes sense)
+    """

@@ -21,8 +21,8 @@ class MissionModes(Enum):
 class LocationUpdaterMock(Thread):
     def __init__(self):
         super().__init__()
-        self.lat = 48.865725
-        self.lon = 2.349100
+        self.lat = 48.844676
+        self.lon = 2.342112
 
     def run(self):
         while True:
@@ -71,6 +71,12 @@ class GPT:
         else:
             raise("Had a problem generating result.")
 
+    def ask_guide_speech(self, user_interests, latlon, radius, nearby_places):
+        prompt = prompts.guide_instructions(user_interests, latlon, radius, nearby_places)
+        print(prompt)
+        result = self.call(prompt)
+        print(f"========\n\n{result}\n\n========")
+
 @dataclass
 class Places:
     target_points: list = field(default_factory=list)
@@ -106,6 +112,7 @@ class Places:
         response = requests.post(url, headers=headers, data=json.dumps(data))
         print(response.status_code)
         print(f"========\n\n{response.json()}\n\n========")
+        return [p["displayName"]["text"] for p in response.json()["places"]]
 
 @dataclass
 class Mission:
@@ -123,7 +130,8 @@ class Mission:
         print(self.places)
         self.location_updater.start()
         while True:
-            self.find_nearby_places(self.location_updater.get_latlon())
+            nearby_places = self.places.call_nearby(self.location_updater.get_latlon())
+            self.gpt.ask_guide_speech(self.user_interests, self.location_updater.get_latlon(), self.places.radius, nearby_places)
             # self.generate_script()
             # self.synth_audio()
             # self.dispatch_play()
@@ -131,14 +139,12 @@ class Mission:
             print()
         self.location_updater.join()
     
-    def find_nearby_places(self, latlon):
-        res = self.places.call_nearby(latlon)
-
     def load_target_types(self):
         targets = self.gpt.ask_target_places(self.user_interests)
         if targets is not None:
             self.places.set_targets(targets)
 
+# TODO: allow user input such as e.g. "what are the most interesting places nearby?"
 user_interests=["history", "architecture", "geography", "local culture"]
 mission = Mission(user_interests, mode=MissionModes.CITY)
 
