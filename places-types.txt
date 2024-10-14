@@ -12,7 +12,8 @@ museum
 performing_arts_theater
 library
 preschool
-primary_school	school
+primary_school
+school
 secondary_school
 university
 amusement_center
