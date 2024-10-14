@@ -1,1 +1,2 @@
-Just run `python3 roadcast.py`, then play the resulting `output.mp3`.
+1. `cp .env.example .env` and set your secrets
+2. just run `python3 roadcast.py`
